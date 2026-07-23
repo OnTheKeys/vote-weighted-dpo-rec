@@ -1,0 +1,5 @@
+# Environment variables
+.env
+# Generated data files
+src/data/*.pickle
+src/data/*.parquet
