@@ -118,7 +118,9 @@ def main():
     test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
 
     len_unique_vns=27707 #Self explanatory magic number
-    two_tower_model = model.two_tower(args.embedding_dim, len(user_tags)+1, len_unique_vns+1, len(tags)+1, args.user_layers, args.item_layers).to(args.device)
+    len_unique_users=70703#Self explanatory magic number
+
+    two_tower_model = model.two_tower(args.embedding_dim, len_unique_users+1, len_unique_vns+1, len(tags)+1, args.user_layers, args.item_layers).to(args.device)
 
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(two_tower_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
