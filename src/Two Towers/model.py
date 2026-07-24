@@ -61,11 +61,6 @@ class two_tower(nn.Module):
 
         user_id_embed = self.user_id_embedding(batch['users'])
         item_id_embed = self.item_id_embedding(batch['items'])
-
-        # Quick diagnostic print before passing into model
-        print("Max User ID:", batch["user_id"].max().item(), "Embedding Size:", self.num_users)
-        print("Min User ID:", batch["user_id"].min().item())
-        # Max ID MUST be < num_users, and Min ID MUST be >= 0
             
         user_tag_embeddings, item_tag_embeddings = self.get_tag_embeddings(batch['user_tag_weights'], batch['user_tag_ids'], batch['item_tag_ids'], batch['item_tag_weights'])
 
@@ -73,8 +68,8 @@ class two_tower(nn.Module):
         item_embedding = torch.cat((item_id_embed, item_tag_embeddings), dim=1)
 
         #Throw user embedding into user tower
-        #Throw item embedding into item tower
         user = self.user_tower(user_embedding)
+        #Throw item embedding into item tower
         item = self.item_tower(item_embedding)
         
         #Takes in user and item, multiplies them element wise then sums out the embedding dimension 

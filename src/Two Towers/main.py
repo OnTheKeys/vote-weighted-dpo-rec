@@ -13,6 +13,12 @@ import shutil
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
+from huggingface_hub import hf_hub_download
+from dotenv import load_dotenv
+from enum import Enum 
+
+
+
 
 def save_checkpoint(state, is_best, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -26,7 +32,57 @@ def save_checkpoint(state, is_best, checkpoint_dir):
         best_path = os.path.join(checkpoint_dir, 'checkpoint_best.pt')
         shutil.copyfile(latest_path, best_path)
 
+
+def get_hf_token(platform):
+    if platform == 'colab':
+        from google.colab import userdata
+        return userdata.get('HF_TOKEN')
+    elif platform == 'kaggle':
+        from kaggle_secrets import UserSecretsClient
+        return UserSecretsClient().get_secret("HF_TOKEN")
+    else:
+        try:
+            load_dotenv()
+            return os.getenv('HF_TOKEN')
+        except ImportError:
+            print("No HF_TOKEN found in environment variables, trying colab.")
+
+def load_data(hf_token):
+
+    REPO_ID = "RadnitzO/vndb"
+
+    # Load train and test DataFrames
+    train_set = pd.read_parquet(
+        hf_hub_download(REPO_ID, filename="train_set.parquet", repo_type="dataset", token=hf_token)
+    )
+    test_set = pd.read_parquet(
+        hf_hub_download(REPO_ID, filename="test_set.parquet", repo_type="dataset", token=hf_token)
+    )
+
+    #Load Dictionaries from Pickles
+    with open(hf_hub_download(REPO_ID, filename="user_tags.pickle", repo_type="dataset", token=hf_token), "rb") as f:
+        user_tags = pickle.load(f)
+
+    with open(hf_hub_download(REPO_ID, filename="vn_tags.pickle", repo_type="dataset", token=hf_token), "rb") as f:
+        vn_tags = pickle.load(f)
+
+    with open(hf_hub_download(REPO_ID, filename="tags.pickle", repo_type="dataset", token=hf_token), "rb") as f:
+        tags = pickle.load(f)
+
+
+    return train_set, test_set, user_tags, vn_tags, tags
+
 def main():
+
+    PLATFORM_MAP = {
+    "1": "kaggle",
+    "kaggle": "kaggle",
+    "2": "colab",
+    "colab": "colab",
+    "3": "local",
+    "local": "local",
+}
+
     parser = argparse.ArgumentParser()
     #Training args
     parser.add_argument('--batch_size', type=int, default=32, help='batch size')
@@ -47,25 +103,12 @@ def main():
     #Checkpoint and resume logic
     parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints', help='path to save checkpoints')
     parser.add_argument('--resume', action='store_true', help='resume from latest checkpoint if available')
+    parser.add_argument('--platform', type=str, default='local', help='platform to use for running')
     args = parser.parse_args()
 
-    #Data loading
-    data_dir = Path(__file__).resolve().parent.parent/"data"
-    
-    
-    train_data = pd.read_parquet(data_dir/'train_set.parquet')
-    test_data = pd.read_parquet(data_dir/'test_set.parquet')
-    user_tags, vn_tags,tags = {}, {}, {}
-    
+    hf_token = get_hf_token(PLATFORM_MAP[args.platform.lower()])
+    train_data, test_data, user_tags, vn_tags, tags = load_data(hf_token)
 
-    with open(data_dir/'user_tags.pickle', 'rb') as f:
-        user_tags = pickle.load(f)
-    
-    with open(data_dir/'vn_tags.pickle', 'rb') as f:
-        vn_tags = pickle.load(f)
-
-    with open(data_dir/'tags.pickle', 'rb') as f:
-        tags = pickle.load(f)
 
 
     train_data = dataset.vn_vote_dataset(train_data, user_tags, vn_tags, args.num_tags)
