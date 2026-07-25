@@ -13,12 +13,12 @@ import shutil
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, HfApi
 from dotenv import load_dotenv
-from enum import Enum 
 
 
-
+api = HfApi()
+REPO_ID = "RadnitzO/vndb"
 
 def save_checkpoint(state, is_best, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -27,10 +27,24 @@ def save_checkpoint(state, is_best, checkpoint_dir):
     latest_path = os.path.join(checkpoint_dir, 'checkpoint_latest.pt')
     torch.save(state, latest_path)
     
+    api.upload_file(
+        path_or_fileobj=os.path.join(checkpoint_dir, 'checkpoint_latest.pt'),
+        path_in_repo="checkpoints/checkpoint_latest.pt", 
+        repo_id=REPO_ID,
+        repo_type="dataset",
+        )
+
     # Copy to best if it's the top-performing epoch so far
     if is_best:
         best_path = os.path.join(checkpoint_dir, 'checkpoint_best.pt')
         shutil.copyfile(latest_path, best_path)
+
+        api.upload_file(
+            path_or_fileobj=os.path.join(checkpoint_dir, 'checkpoint_latest.pt'),
+            path_in_repo="checkpoints/checkpoint_best.pt",
+            repo_id=REPO_ID,
+            repo_type="dataset",
+        )
 
 
 def get_hf_token(platform):
@@ -48,8 +62,6 @@ def get_hf_token(platform):
             print("No HF_TOKEN found in environment variables, trying colab.")
 
 def load_data(hf_token):
-
-    REPO_ID = "RadnitzO/vndb"
 
     # Load train and test DataFrames
     train_set = pd.read_parquet(
@@ -131,17 +143,32 @@ def main():
 
     writer = SummaryWriter(Path(__file__).resolve().parent/'runs')
     
-    if args.resume and os.path.exists(checkpoint_path):
-        print(f" Found checkpoint at {checkpoint_path}. Resuming...")
+    #Check if checkpoints exist on huggingface
+    checkpoint_exists = api.file_exists(
+    repo_id=REPO_ID,
+    filename="checkpoints/checkpoint_latest.pt",  # relative path inside repo
+    repo_type="dataset",
+    )
+
+    if args.resume: 
+        if os.path.exists(checkpoint_path):
+            print(f" Found checkpoint at {checkpoint_path}. Resuming...")
+            
+            #Map_location ensures safe loading across different GPU types 
+            checkpoint = torch.load(checkpoint_path, map_location=args.device)
+
+        elif checkpoint_exists:
+            print(f"Found checkpoint on huggingface. Resuming...")
+
+            checkpoint = torch.load(hf_hub_download(repo_id=REPO_ID, filename="checkpoints/checkpoint_latest.pt", repo_type="dataset", token=hf_token), map_location=args.device)
         
-        #Map_location ensures safe loading across different GPU types 
-        checkpoint = torch.load(checkpoint_path, map_location=args.device)
-        
+        #Load model and optimizer state dicts
         two_tower_model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch'] + 1
         best_loss = checkpoint.get('best_loss', float('inf'))
         print(f"Resumed successfully! Starting from Epoch {start_epoch + 1}")
+
     else:
         print("Starting fresh training run.")
         
