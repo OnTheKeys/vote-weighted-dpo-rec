@@ -17,10 +17,9 @@ from huggingface_hub import hf_hub_download, HfApi
 from dotenv import load_dotenv
 
 
-api = HfApi()
 REPO_ID = "RadnitzO/vndb"
 
-def save_checkpoint(state, is_best, checkpoint_dir):
+def save_checkpoint(state, is_best, checkpoint_dir, api):
     os.makedirs(checkpoint_dir, exist_ok=True)
     
     # Save the latest state (overwrites previous to save disk space)
@@ -119,6 +118,8 @@ def main():
     args = parser.parse_args()
 
     hf_token = get_hf_token(PLATFORM_MAP[args.platform.lower()])
+
+    api = HfApi(token=hf_token)
     train_data, test_data, user_tags, vn_tags, tags = load_data(hf_token)
 
 
@@ -189,7 +190,7 @@ def main():
             'loss': train_loss,
             'best_loss': best_loss,
             'args': vars(args) 
-        }, is_best=is_best, checkpoint_dir=args.checkpoint_dir)
+        }, is_best=is_best, checkpoint_dir=args.checkpoint_dir, api=api)
         writer.add_scalar('loss', train_loss, epoch)
         writer.add_scalar('test_loss', test_loss, epoch)
         writer.add_scalar('best_loss', best_loss, epoch)

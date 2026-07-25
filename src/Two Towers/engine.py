@@ -23,10 +23,10 @@ def train_loop(dataloader : DataLoader, model : model.two_tower, loss_fn, optimi
         torch.cuda.synchronize()
         if batch_num % 100 == 0:
             rmse = torch.sqrt(loss)
-            loss, current = loss.item(), batch_num * dataloader.batch_size + batch['votes'].shape[0] 
-            print(f"loss: {loss:>7f}, rmse: {rmse:>7f}  [{current:>5d}/{size:>5d}]")
+            loss_val, current = loss.item(), batch_num * dataloader.batch_size + batch['votes'].shape[0] 
+            print(f"loss: {loss_val:>7f}, rmse: {rmse:>7f}  [{current:>5d}/{size:>5d}]")
     train_loss /= num_batches
-    print(f"Test loss: {train_loss:>8f}")
+    print(f"Train loss: {train_loss:>8f}")
 
     return train_loss
 
@@ -53,7 +53,7 @@ def test_loop(dataloader, model, loss_fn, device):
             if batch_num % 100 == 0:
                 rmse = torch.sqrt(loss)
                 loss_val, current = loss.item(), batch_num * dataloader.batch_size + batch['votes'].shape[0] 
-                print(f"loss: {loss:>7f}, rmse: {rmse:>7f}  [{current:>5d}/{size:>5d}]")
+                print(f"loss: {loss_val:>7f}, rmse: {rmse:>7f}  [{current:>5d}/{size:>5d}]")
 
     test_loss /= num_batches
     ndcg = ndcg_metric.compute()
