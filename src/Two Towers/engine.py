@@ -30,7 +30,7 @@ def test_loop(dataloader, model, loss_fn, device):
     test_loss= 0
     num_batches = len(dataloader)
     with torch.no_grad():
-        for batch in dataloader:
+        for batch_num,batch in enumerate(dataloader):
             #Sends all tensors to model device 
             batch = {
                 k: v.to(device) if isinstance(v, torch.Tensor) else v 
@@ -40,6 +40,12 @@ def test_loop(dataloader, model, loss_fn, device):
             loss = loss_fn(y_hat, batch['votes'])
             test_loss += loss.item()
             ndcg_metric.update(y_hat, batch['votes'], batch['users'])
+            
+            if batch_num % 100 == 0:
+                rmse = torch.sqrt(loss)
+                loss, current = loss.item(), batch_num * dataloader.batch_size + batch['votes'].shape[0] 
+                print(f"loss: {loss:>7f}, rmse: {rmse:>7f}  [{current:>5d}/{size:>5d}]")
+
     test_loss /= num_batches
     ndcg = ndcg_metric.compute()
     print(f"Test loss: {test_loss:>8f}, NDCG: {ndcg:>8f}")

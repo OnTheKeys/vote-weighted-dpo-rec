@@ -130,7 +130,7 @@ def main():
     checkpoint_path = os.path.join(args.checkpoint_dir, 'checkpoint_latest.pt')
 
     writer = SummaryWriter(Path(__file__).resolve().parent/'runs')
-
+    
     if args.resume and os.path.exists(checkpoint_path):
         print(f" Found checkpoint at {checkpoint_path}. Resuming...")
         
