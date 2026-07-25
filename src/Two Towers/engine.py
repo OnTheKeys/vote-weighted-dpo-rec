@@ -44,5 +44,7 @@ def test_loop(dataloader, model, loss_fn, device):
     ndcg = ndcg_metric.compute()
     print(f"Test loss: {test_loss:>8f}, NDCG: {ndcg:>8f}")
 
+    return test_loss
+
             
     
