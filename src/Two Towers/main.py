@@ -114,7 +114,7 @@ def main():
     train_data = dataset.vn_vote_dataset(train_data, user_tags, vn_tags, args.num_tags)
     test_data = dataset.vn_vote_dataset(test_data, user_tags, vn_tags, args.num_tags)
     #Connect and load dataset 
-    train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=False)
+    train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False)
 
     len_unique_vns=27707 #Self explanatory magic number
